@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "dscvr-struct": "dist/index.js"
+    "struct": "dist/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

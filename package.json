@@ -1,0 +1,31 @@
+{
+  "name": "@discovery-solutions/struct-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "dscvr-struct": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -w",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^0.0.45",
+    "ai": "^3.2.12",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "execa": "^9.3.0",
+    "fs-extra": "^11.2.0",
+    "ora": "^8.0.1",
+    "prompts": "^2.4.2",
+    "simple-git": "^3.25.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.7.5",
+    "@types/prompts": "^2.4.9",
+    "typescript": "^5.6.3"
+  }
+}

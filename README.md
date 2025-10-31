@@ -4,7 +4,7 @@ CLI para inicializar projetos e gerar entidades para o boilerplate DSCVR Struct.
 
 ## Instalação
 ```bash
-npx github:discovery-solutions/struct-cli@latest init
+npx github:discovery-solutions/struct-cli init
 ```
 
 ou local:
@@ -16,13 +16,13 @@ node dist/index.js --help
 
 ## Comandos
 
-- ```struct init```
+- ```npx github:discovery-solutions/struct-cli init```
   - Clona o boilerplate oficial e personaliza o nome do projeto.
   - Opções:
     - ```--name <projectName>```
     - ```--branch <branch>``` (default: main)
 
-- ```struct generate --doc <file.md|json>```
+- ```npx github:discovery-solutions/struct-cli generate --doc <file.md|json>```
   - Extrai entidades do documento usando OpenAI e gera:
     - models (index.ts, model.tsx, utils.tsx)
     - API CRUD (route.ts)
@@ -35,11 +35,11 @@ node dist/index.js --help
 
 ## Requisitos
 - Defina OPENAI_API_KEY no ambiente antes de rodar `generate`.
-- Projeto alvo deve ser o boilerplate DSCVR Struct (ou compatível).
+- Projeto alvo deve ser o boilerplate DSCVRStruct (ou compatível).
 
 ## Exemplo
 ```bash
-struct init --name my-app
+npx github:discovery-solutions/struct-cli init --name my-app
 cd my-app
 cp .env.example .env.local
 pnpm install
@@ -47,5 +47,5 @@ pnpm install
 
 # Configure OPENAI_API_KEY no .env.local
 ```bash
-struct generate --doc ./postcraft.md --domain content
+npx github:discovery-solutions/struct-cli generate --doc ./postcraft.md --domain content
 ```

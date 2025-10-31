@@ -12,10 +12,10 @@ export const ${lc(entityPascal)}Schema = ${zodCreate};
 
 export const ${lc(entityPascal)}UpdateSchema = ${zodUpdate};
 `;
-export const modelTemplate = (entityPascal, mongooseFields) => `import mongoose from "mongoose";
+export const modelTemplate = (entityPascal, mongooseFields) => `import { db, Schema } from "@/lib/mongoose";
 import { ${entityPascal}Interface } from "./";
 
-const schema = new mongoose.Schema<${entityPascal}Interface>({
+const schema = new Schema<${entityPascal}Interface>({
 ${mongooseFields}
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
@@ -24,7 +24,7 @@ ${mongooseFields}
 
 schema.index({ deletedAt: 1 });
 
-export const ${entityPascal} = mongoose.models.${entityPascal} || mongoose.model<${entityPascal}Interface>("${entityPascal}", schema);
+export const ${entityPascal} = db.models.${entityPascal} || db.model<${entityPascal}Interface>("${entityPascal}", schema);
 `;
 export const utilsTemplate = (entityPascal, columns, fields) => `"use client";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -39,20 +39,16 @@ export const ${lc(entityPascal)}Fields: FieldInterface[] = [
 ${fields}
 ];
 `;
-export const apiRouteTemplate = (plural, entityPascal) => `import { CRUDController } from "@/struct";
+export const apiRouteTemplate = (plural, entityPascal, rolesJson, softDelete, populateJson) => `import { CRUDController } from "@/struct";
 import { ${entityPascal}, ${entityPascal}Interface } from "@/models/${plural}/${lc(entityPascal)}/model";
 import { ${lc(entityPascal)}Schema, ${lc(entityPascal)}UpdateSchema } from "@/models/${plural}/${lc(entityPascal)}";
 
 export const { GET, POST, PATCH, DELETE } = new CRUDController<${entityPascal}Interface>(${entityPascal}, {
-  softDelete: true,
+  softDelete: ${softDelete ? "true" : "false"},
   createSchema: ${lc(entityPascal)}Schema,
   updateSchema: ${lc(entityPascal)}UpdateSchema,
-  roles: {
-    GET: ["admin","user"],
-    POST: "admin",
-    PATCH: "admin",
-    DELETE: "superadmin"
-  }
+  roles: ${rolesJson},
+  populate: ${populateJson}
 });
 `;
 export const pageListTemplate = (plural, entityPascal) => `"use client";

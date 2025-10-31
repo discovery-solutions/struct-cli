@@ -1,11 +1,9 @@
-import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 import { ensureDir } from "fs-extra";
 import prompts from "prompts";
 import path from "node:path";
 import { cloneBoilerplate, personalizeProject } from "../lib/git.js";
 import { logInfo, logSuccess, logWarn } from "../lib/log.js";
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default async function init(opts) {
     const answers = await prompts([
         {

@@ -1,14 +1,35 @@
 import path from "node:path";
 import fs from "fs-extra";
-import { toKebabPlural, toPascalCase } from "./names.js";
 import { idxTemplate, modelTemplate, utilsTemplate, apiRouteTemplate, pageListTemplate } from "./templates.js";
-import { logInfo } from "./log.js";
+import { toKebabPlural, toPascalCase } from "./names.js";
+import { logInfo, logWarn } from "./log.js";
 export async function writeEntities(opts) {
     for (const ent of opts.entities) {
+        // domain MUST come from the generated entity
+        if (!ent.domain || typeof ent.domain !== "string" || !ent.domain.trim()) {
+            logWarn(`⚠ Skipping entity "${ent.name}" — missing domain (ent.domain). Review the generated entity.`);
+            continue; // skip entities without domain so human can review
+        }
         const namePascal = toPascalCase(ent.name);
         const plural = toKebabPlural(ent.name);
-        // Paths
-        const modelDir = path.join(opts.projectRoot, "src/models", opts.domain, namePascal.toLowerCase());
+        // Normalize roles helper
+        const normalizeRolesForWrite = (roles) => {
+            const ensureArray = (v) => (Array.isArray(v) ? v : typeof v === "string" ? [v] : []);
+            const methods = ["GET", "POST", "PATCH", "DELETE"];
+            const out = {};
+            for (const m of methods) {
+                out[m] = ensureArray(roles?.[m] ?? []).length
+                    ? ensureArray(roles?.[m])
+                    : // default fallbacks (safe)
+                        (m === "GET" ? ["admin", "user"] : m === "DELETE" ? ["superadmin"] : ["admin"]);
+                // normalize to lowercase or keep original? keep original casing from model but dedupe
+                out[m] = Array.from(new Set(out[m]));
+            }
+            return out;
+        };
+        // Paths (use entity.domain)
+        const domainFolder = ent.domain;
+        const modelDir = path.join(opts.projectRoot, "src", "models", domainFolder, namePascal.toLowerCase());
         await fs.ensureDir(modelDir);
         // Compose fields
         const { fieldsTs, zodCreate, zodUpdate, mongooseFields, columns, fields } = toCodeFromEntity(ent);
@@ -19,19 +40,20 @@ export async function writeEntities(opts) {
         // Write utils.tsx
         await writeFileSafe(path.join(modelDir, "utils.tsx"), utilsTemplate(namePascal, columns, fields));
         // API route
-        const apiDir = path.join(opts.projectRoot, "src/app/api", plural, "[[...id]]");
-        const rolesJson = JSON.stringify(ent.api?.roles ?? { GET: ["admin", "user"], POST: "admin", PATCH: "admin", DELETE: "superadmin" }, null, 2);
+        const apiDir = path.join(opts.projectRoot, "src", "app", "api", domainFolder, plural, "[[...id]]");
+        const normalizedRoles = normalizeRolesForWrite(ent.api?.roles ?? {});
+        const rolesJson = JSON.stringify(normalizedRoles, null, 2);
         const softDelete = ent.api?.softDelete ?? true;
         const populateJson = JSON.stringify(ent.api?.populate ?? [], null, 2);
         await fs.ensureDir(apiDir);
         await writeFileSafe(path.join(apiDir, "route.ts"), apiRouteTemplate(plural, namePascal, rolesJson, softDelete, populateJson));
         // UI page (list)
         if (opts.withUI) {
-            const pageDir = path.join(opts.projectRoot, "src/app/dashboard", plural);
+            const pageDir = path.join(opts.projectRoot, "src", "app", "dashboard", domainFolder, plural);
             await fs.ensureDir(pageDir);
             await writeFileSafe(path.join(pageDir, "page.tsx"), pageListTemplate(plural, namePascal));
         }
-        logInfo(`✔ Entidade ${namePascal} gerada.`);
+        logInfo(`✔ Entidade ${namePascal} gerada (domain: ${ent.domain}).`);
     }
 }
 async function writeFileSafe(filePath, content) {

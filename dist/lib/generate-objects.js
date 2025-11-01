@@ -61,62 +61,63 @@ export const expandedEntitySchema = z.object({
    ------------------------- */
 /**
  * Identify entities (returns array of { name, description })
+ * agora aceita optional installPath para contexto
  */
 export async function identifyEntitiesGenerate(doc) {
     try {
-        const { object, usage, finishReason, response } = await generateObject({
+        const { object } = await generateObject({
             model: openai("gpt-4o-mini"),
-            output: "array", // return an array of items matching the schema
-            schema: identifiedEntitySchema, // schema for array element
+            output: "array",
+            schema: identifiedEntitySchema,
             schemaName: "IdentifiedEntity",
             schemaDescription: "A simple object with name and description of a domain entity",
             maxRetries: 2,
             prompt: `
-Você é um analista de produto. Sua única tarefa é identificar entidades (name e description) a partir do documento abaixo.
-
-Regras obrigatórias:
-- Retorne APENAS um array JSON de objetos com "name" e "description".
-- NÃO inclua "fields", "ui", "api" ou qualquer outra chave.
-- NÃO inclua texto fora do JSON.
-- Máximo de 10 entidades.
-- Nomes devem ser em ingles, pascal case (ex.: User, ProductItem).
+Você é um analista de produto. Sua ÚNICA tarefa é listar entidades de DOMÍNIO (modelos de dados persistentes) encontradas no documento abaixo.
+Regras obrigatórias (LEIA COM ATENÇÃO):
+- RETORNE APENAS entidades de DOMÍNIO que representam dados armazenados em banco (ex.: User, Project, Idea, Subscription).
+- NÃO retorne componentes técnicos, infra, UI, rotas, providers, controllers, hooks ou serviços. Exemplos que DEVEM SER EXCLUÍDOS: "ModelForm", "CRUDController", "StructUIProvider", "EnvConfig", "VercelBlob", "GoogleOAuth", "TableView", "Page", "Route".
+- Cada entidade deve vir com 1-3 campos de exemplo (campo:tipo) para comprovar que é um modelo de dados.
+- Retorne ESTRITAMENTE um array JSON: [{ "name": "EntityName", "description": "desc" }, ...]
+- Nomes devem ser PascalCase, em inglês, e representar substantivos (não ações).
+- Se não houver entidades de domínio claras, retorne um array vazio [].
 
 Documento:
 ---
 ${doc}
 ---
 
-OBRIGATÓRIO: Lembre-se que usuarios/atores tem seus papais definidos via role.
-
-Formato de saída ESTRITO:
+Saída ESTRITA (exemplo):
 [
   { "name": "User", "description": "Representa um usuário do sistema." },
-  { "name": "Product", "description": "Representa um item disponível para venda." }
+  { "name": "Modelname", "description": "Representa um modelo de dados." },
 ]
-`,
+`
         });
         return object;
     }
     catch (err) {
         console.error("identifyEntitiesGenerate error:", err?.message ?? err);
-        if (err?.text) {
+        if (err?.text)
             console.error("identify raw model output:", err.text);
-        }
         throw err;
     }
 }
 /**
  * Expand a single entity (returns one object matching expandedEntitySchema)
+ * agora recebe installPath e OBRIGA o modelo a gerar domain
  */
-export async function expandEntityGenerate(name, description, doc) {
+export async function expandEntityGenerate(name, description, doc, options) {
+    const installPathInfo = options?.installPath ? `Boilerplate install path: ${options.installPath}\n` : "";
     try {
-        const { object, usage, finishReason, response } = await generateObject({
+        const { object } = await generateObject({
             model: openai("gpt-5-mini"),
             schema: expandedEntitySchema,
             schemaName: "ExpandedEntity",
             maxRetries: 2,
-            schemaDescription: "Detailed entity definition with fields, ui and api configuration for Next.js + Mongoose + Struct boilerplate.",
+            schemaDescription: "Detailed entity definition with fields, ui and api configuration for Next.js + Mongoose + Struct boilerplate. MUST include domain.",
             prompt: `
+${installPathInfo}
 Você é um gerador de esquemas para um boilerplate Next.js + Mongoose + Struct.
 
 Entrada:
@@ -127,34 +128,34 @@ ${doc}
 ---
 
 Regras obrigatórias:
-- Retorne APENAS um objeto JSON ESTRITO com as chaves: name, description, fields, ui, api.
+- Retorne APENAS um objeto JSON ESTRITO com as chaves: name, domain, description, fields, ui, api.
+- "domain" é OBRIGATÓRIO: escolha um domínio curto e significante (ex: "content", "billing", "auth", "users", "admin"). O domain será usado pelo boilerplate para organizar rotas/paths.
 - Types permitidos em fields[].type:
   text, number, date, datetime, textarea, markdown, select, enum, relation, model-select, tags, image, file, avatar, document, file-openai, password, toggle
 - Booleanos devem ser representados como select com options semânticas (ex.: active/inactive ou yes/no).
-- Para enums/select, preencha "options": [{ value, label }].
-- Para relation, use "ref" com o nome da entidade alvo.
+- Para select, preencha "options": [{ value, label }].
+- Para model-select, use "endpoint" com o nome do domain + nome da entidade alvo (PascalCase) (ex: "identity/user").
 - NÃO inclua createdAt/updatedAt/deletedAt nos fields.
-- "name" precisa ser inglês.
 
 OBRIGATÓRIO: sempre inclua em api.roles permissões para cada método HTTP (GET, POST, PATCH, DELETE). Use arrays de roles (ex.: "GET": ["admin","user"]). Se o domínio envolve múltiplos atores (ex.: autor, admin, manager, customer), gere regras diferenciadas e inclua rolesExplanation (curta) explicando por que cada role foi escolhida).
 
 Formato de saída ESTRITO (exemplo):
 {
   "name": "${name}",
+  "domain": "content",
   "description": "${description}",
   "fields": [ ... ],
   "ui": { "list": [...], "form": [...] },
   "api": { "roles": { "GET": ["admin"] }, "softDelete": true, "populate": [...] }
 }
-`,
+`
         });
         return object;
     }
     catch (err) {
         console.error(`expandEntityGenerate error for ${name}:`, err?.message ?? err);
-        if (err?.text) {
+        if (err?.text)
             console.error(`expand raw model output for ${name}:`, err.text);
-        }
         throw err;
     }
 }

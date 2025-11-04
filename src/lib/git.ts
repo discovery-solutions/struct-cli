@@ -30,15 +30,20 @@ export async function personalizeProject(opts: { targetDir: string; projectName:
   const envExamplePath = path.join(opts.targetDir, ".env.example");
   if (!(await fs.pathExists(envExamplePath))) {
     const base = `NEXT_PUBLIC_APP_URL=http://localhost:3000
+
 AUTH_SECRET=change_me
+AUTH_URL=
 
 MONGODB_URI=
+MONGODB_NAME=
 
 EMAIL_FROM="Seu App <noreply@seu-dominio.com>"
 EMAIL_SERVER=
 
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+
+PLATFORM_API_KEY=
 
 OPENAI_API_KEY=
 BLOB_READ_WRITE_TOKEN=
